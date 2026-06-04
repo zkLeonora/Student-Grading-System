@@ -3,7 +3,7 @@
 A Next.js 16 application for managing school grading workflows with login, role-based dashboards, and grade reporting.
 
 
-### Halaman Login
+### Landing Page(Login)
 ![Login](https://raw.githubusercontent.com/zkLeonora/Student-Grading-System/main/public/login.png)
 
 ## Project Summary
