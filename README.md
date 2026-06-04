@@ -62,9 +62,9 @@ The current database configuration is in `lib/db.ts`:
 
 - `host`: `localhost`
 - `user`: `root`
-- `password`: `ktfc4321`
+- `password`: `xxx` Use your MySQL password
 - `port`: `3307`
-- `database`: `manajemen_nilai`
+- `database`: `xxx` Use your database name
 
 3. Run the development server:
 
