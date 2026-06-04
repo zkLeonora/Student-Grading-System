@@ -2,6 +2,10 @@
 
 A Next.js 16 application for managing school grading workflows with login, role-based dashboards, and grade reporting.
 
+
+### Halaman Login
+![Login](public/screenshots/login.png)
+
 ## Project Summary
 
 This app is built for school administration with two main roles:
