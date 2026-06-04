@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LSP 1 - School Grading Management
 
-## Getting Started
+A Next.js 16 application for managing school grading workflows with login, role-based dashboards, and grade reporting.
 
-First, run the development server:
+## Project Summary
+
+This app is built for school administration with two main roles:
+
+- `admin` — manages teachers, students, and grade reports
+- `guru` — manages student grades and views reports
+
+The root `app/page.tsx` redirects directly to the `/login` page.
+
+## Key Features
+
+- Role-based authentication for `admin` and `guru`
+- Secure login using `bcrypt` encrypted passwords
+- MySQL database connection using `mysql2`
+- Next.js API routes under `app/api`
+- Modern Tailwind CSS layout with React components
+- App Router-based navigation and page structure
+
+## Workspace Structure
+
+- `app/`
+  - `login/page.tsx` — user login page
+  - `admin/` — admin dashboard and management pages
+  - `guru/` — teacher dashboard and grade management pages
+  - `api/` — backend endpoints for login, logout, and data operations
+- `lib/db.ts` — MySQL connection pool configuration
+- `public/` — static assets such as logos or images
+- `app/globals.css` — global styling
+- `next.config.ts` — Next.js configuration
+- `eslint.config.mjs` — linting configuration
+
+## Tech Stack
+
+- Next.js `16.2.7`
+- React `19.2.4`
+- TypeScript `^5`
+- Tailwind CSS `^4`
+- MySQL (`mysql2`)
+- Bcrypt for password hashing
+- ESLint for code quality
+- Lucide React for icons
+
+## Installation
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Set up your MySQL database.
+
+The current database configuration is in `lib/db.ts`:
+
+- `host`: `localhost`
+- `user`: `root`
+- `password`: `ktfc4321`
+- `port`: `3307`
+- `database`: `manajemen_nilai`
+
+3. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open the application in the browser:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Usage Flow
 
-## Learn More
+- Open `http://localhost:3000`
+- Log in using the login page
+- After login, the app shows a dashboard based on the user role
 
-To learn more about Next.js, take a look at the following resources:
+### Admin Pages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `/admin/dashboard`
+- `/admin/kelola-guru`
+- `/admin/kelola-siswa`
+- `/admin/laporan-nilai`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Teacher Pages
 
-## Deploy on Vercel
+- `/guru/dashboard`
+- `/guru/kelola-nilai`
+- `/guru/laporan-nilai`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Important API Endpoints
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `POST /api/login` — authenticate user and set session cookies
+- `POST /api/logout` — remove session cookies
+- `GET /api/admin/...` — admin data operations
+- `GET /api/guru/...` — teacher data operations
+
+## Final Grade Calculation
+This system uses a weighted final grade formula as follows:
+
+- Assignment Grade: 30%
+- Midterm Exam (UTS): 30%
+- Final Exam (UAS): 40%
+
+### Formula:
+
+```text
+Final Grade = (Assignment × 0.3) + (UTS × 0.3) + (UAS × 0.4)
+```
+
+### Example Calculation:
+
+```text
+Assignment = 80
+UTS        = 90
+UAS        = 100
+Final Grade = (80 × 0.3) + (90 × 0.3) + (100 × 0.4)
+            = 24 + 27 + 40
+            = 91
+```
+
+The final value is stored in the `nilai` table in the `nilai_akhir` column and is used to determine the student graduation status.
+
+## Development Commands
+
+- `npm run dev` — start development mode
+- `npm run build` — build the app for production
+- `npm run start` — run the production server
+- `npm run lint` — run ESLint checks
+
+## Notes
+
+- The current database configuration is hard-coded in code. For production, move it to environment variables.
+- The `/api/login` endpoint stores `session_user` and `session_role` cookies for authentication.
+- Ensure your MySQL database schema includes the `users`, `guru`, `siswa`, and `nilai` tables.
+
+## License
+
+This repository does not currently specify a license.
+
