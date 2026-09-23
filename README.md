@@ -2,6 +2,11 @@
 
 A Next.js 16 application for managing school grading workflows with login, role-based dashboards, and grade reporting.
 
+## Live Demo
+
+The application is deployed on Vercel and can be accessed here:
+
+[**Open Student Grading System**](https://studentgradesystem.vercel.app/login)
 
 ### Landing Page(Login)
 ![Login](https://raw.githubusercontent.com/zkLeonora/Student-Grading-System/main/public/login.png)
