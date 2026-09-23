@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
-export async function PUT(req: Request, { params }: Params) {
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
     const body = await req.json();
@@ -49,7 +46,10 @@ export async function PUT(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
 
   await db.query(`

@@ -15,7 +15,23 @@ export async function GET() {
       );
     }
 
-    const [rows] = await db.query<RowDataPacket[]>(`
+    let guruId: string | null = null;
+    try {
+      const session = JSON.parse(sessionUser.value) as { guru_id?: string | null };
+      guruId = session.guru_id ?? null;
+    } catch {
+      guruId = null;
+    }
+
+    if (!guruId) {
+      return NextResponse.json(
+        { message: "Anda tidak memiliki akses" },
+        { status: 403 }
+      );
+    }
+
+    const [rows] = await db.query<RowDataPacket[]>(
+      `
       SELECT
         s.nis,
         s.nama,
@@ -29,10 +45,12 @@ export async function GET() {
         n.status_nilai,
         n.status_kelulusan
       FROM siswa s
-      LEFT JOIN nilai n ON n.nis = s.nis
-      LEFT JOIN guru g ON n.id_guru = g.id
+      JOIN nilai n ON n.nis = s.nis AND n.id_guru = ?
+      JOIN guru g ON n.id_guru = g.id
       ORDER BY s.nama ASC;
-    `);
+    `,
+      [guruId]
+    );
 
     return NextResponse.json(rows);
   } catch (error) {

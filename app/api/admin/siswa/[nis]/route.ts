@@ -3,40 +3,58 @@ import { db } from "@/lib/db";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ nis: string }> }) {
   const { nis } = await params;
-  const { nama, kelas, id_guru } = await req.json();
+  const { nama, kelas, mapel } = await req.json();
 
-  // 1. Update data pokok siswa
-  await db.query(`UPDATE siswa SET nama = ?, kelas = ? WHERE nis = ?`, [nama, kelas, nis]);
+  if (!Array.isArray(mapel) || mapel.length === 0) {
+    return NextResponse.json({ success: false, message: "Pilih minimal satu mata pelajaran." }, { status: 400 });
+  }
 
-  // 2. Update data nilai (pasti hanya ada 1 karena constraint UNIQUE)
-  await db.query(`UPDATE nilai SET id_guru = ? WHERE nis = ?`, [id_guru, nis]);
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
 
-  return NextResponse.json({ success: true });
+    await connection.query(`UPDATE siswa SET nama = ?, kelas = ? WHERE nis = ?`, [nama, kelas, nis]);
+
+    await connection.query(`DELETE FROM nilai WHERE nis = ?`, [nis]);
+
+    for (const id_guru of mapel) {
+      if (!id_guru) continue;
+      await connection.query(
+        `INSERT INTO nilai (nis, id_guru, nilai_tugas, nilai_uts, nilai_uas, nilai_akhir)
+         VALUES (?, ?, 0, 0, 0, 0)`,
+        [nis, id_guru]
+      );
+    }
+
+    await connection.commit();
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    await connection.rollback();
+    console.error("PUT Error:", error);
+    return NextResponse.json({ success: false, message: "Gagal memperbarui data siswa." }, { status: 500 });
+  } finally {
+    connection.release();
+  }
 }
 
-// Hapus data siswa berdasarkan NIS
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ nis: string }> }
-) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ nis: string }> }) {
   try {
     const { nis } = await params;
-
-    // ✅ NOTE: jika ada FK constraint di tabel nilai (nis → siswa.nis),
-    // pastikan ON DELETE CASCADE aktif di DB, atau hapus nilai dulu secara manual:
-    // await db.query(`DELETE FROM nilai WHERE nis = ?`, [nis]);
-
-    await db.query(`DELETE FROM siswa WHERE nis = ?`, [nis]);
-
-    return NextResponse.json({
-      success: true,
-      message: "Data siswa berhasil dihapus",
-    });
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(`DELETE FROM nilai WHERE nis = ?`, [nis]);
+      await conn.query(`DELETE FROM siswa WHERE nis = ?`, [nis]);
+      await conn.commit();
+    } catch (innerError) {
+      await conn.rollback();
+      throw innerError;
+    } finally {
+      conn.release();
+    }
+    return NextResponse.json({ success: true, message: "Data siswa berhasil dihapus" });
   } catch (error) {
     console.error("DELETE Error:", error);
-    return NextResponse.json(
-      { success: false, message: "Gagal menghapus data siswa" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: "Gagal menghapus data siswa" }, { status: 500 });
   }
 }

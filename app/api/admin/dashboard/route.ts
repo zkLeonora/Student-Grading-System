@@ -25,6 +25,8 @@ interface Nilai extends RowDataPacket {
   kelas: string;
   mata_pelajaran: string;
   nilai_akhir: number;
+  nama_guru?: string;
+  created_at?: string | null;
 }
 
 export async function GET() {
@@ -44,8 +46,10 @@ export async function GET() {
             s.nama,
             s.kelas,
             g.mata_pelajaran,
+            g.nama_guru,
             n.nilai_akhir,
-            n.status_nilai
+            n.status_nilai,
+            n.created_at
             FROM nilai n
             JOIN siswa s ON n.nis = s.nis
             JOIN guru g ON n.id_guru = g.id
