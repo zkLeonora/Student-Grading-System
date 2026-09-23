@@ -45,7 +45,6 @@ The root `app/page.tsx` redirects directly to the `/login` page.
 - Tailwind CSS `^4`
 - MySQL (`mysql2`)
 - Bcrypt for password hashing
-- ESLint for code quality
 - Lucide React for icons
 
 ## Installation

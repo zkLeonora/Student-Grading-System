@@ -2,14 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AlertTriangle, Info, Loader2 } from "lucide-react";
+import AppShell, { PageHeader } from "@/components/AppShell";
+import { SortTh, sortRows, type SortState } from "@/components/SortableTh";
+import { useI18n } from "@/components/I18n";
 import {
-  Users,
-  LayoutDashboard,
-  FileText,
-  LogOut,
-  AlertTriangle,
-} from "lucide-react";
-import Image from "next/image";
+  badgeKelulusan,
+  btnCta,
+  btnDarkPill,
+  btnDangerPill,
+  btnSmDanger,
+  btnSmNeutral,
+  btnSmPrimary,
+  emptyCell,
+  input,
+  label,
+  modalBody,
+  modalFooter,
+  modalOverlay,
+  modalPanel,
+  modalTitle,
+  panel,
+  select,
+  tableHeadRow,
+  tdCenter,
+  thCenter,
+  tr,
+} from "@/components/ui";
 
 type Nilai = {
   id: number;
@@ -21,17 +40,21 @@ type Nilai = {
   nilai_uts: number;
   nilai_uas: number;
   nilai_akhir: number;
-  status_kelulusan: string | null; 
-  status_nilai: string;         
+  status_kelulusan: string | null;
+  status_nilai: string;
 };
 
 export default function GuruNilaiPage() {
   const router = useRouter();
+  const { t, tv } = useI18n();
 
   const [semuaNilai, setSemuaNilai] = useState<Nilai[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sort, setSort] = useState<SortState | null>(null);
   const [showModalTambahNilai, setShowModalTambahNilai] = useState(false);
   const [showModalEditNilai, setShowModalEditNilai] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showNeedInputModal, setShowNeedInputModal] = useState(false);
   const [selectedSiswa, setSelectedSiswa] = useState<Nilai | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -81,7 +104,15 @@ export default function GuruNilaiPage() {
     setShowModalTambahNilai(true);
   };
 
+  const belumPernahInput = (nilai: Nilai) =>
+    !nilai.status_nilai || nilai.status_nilai === "Belum Dinilai";
+
   const openEditNilai = (nilai: Nilai) => {
+    if (belumPernahInput(nilai)) {
+      openNeedInput(nilai);
+      return;
+    }
+
     setSelectedSiswa(nilai);
     setSelectedId(nilai.id);
 
@@ -93,6 +124,33 @@ export default function GuruNilaiPage() {
     });
 
     setShowModalEditNilai(true);
+  };
+
+  const openNeedInput = (nilai: Nilai) => {
+    setSelectedSiswa(nilai);
+    setSelectedId(nilai.id);
+    setShowNeedInputModal(true);
+  };
+
+  const openDeleteNilai = (nilai: Nilai) => {
+    if (belumPernahInput(nilai)) {
+      openNeedInput(nilai);
+      return;
+    }
+    setSelectedId(nilai.id);
+    setShowDeleteModal(true);
+  };
+
+  const closeNeedInputModal = () => {
+    setShowNeedInputModal(false);
+    setSelectedSiswa(null);
+    setSelectedId(null);
+  };
+
+  const gotoInputFromNeedInput = () => {
+    const nilai = selectedSiswa;
+    setShowNeedInputModal(false);
+    if (nilai) openTambahNilai(nilai);
   };
 
   const closeModalTambah = () => {
@@ -131,7 +189,7 @@ export default function GuruNilaiPage() {
         await fetchNilai();
         closeModalTambah();
       } else {
-        alert("Gagal menambahkan nilai.");
+        alert(t("nmg.errAdd"));
       }
     } catch (error) {
       console.error(error);
@@ -179,6 +237,8 @@ export default function GuruNilaiPage() {
       setSemuaNilai(data);
     } catch (error) {
       console.error("Gagal memuat data nilai:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -187,243 +247,294 @@ export default function GuruNilaiPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100" suppressHydrationWarning>
+    <AppShell
+      role="guru"
+      active="/guru/kelola-nilai"
+      onNavigate={(href) => router.push(href)}
+      onLogout={handleLogout}
+    >
+      <PageHeader
+        title={t("nmg.title")}
+        description={t("nmg.desc")}
+      />
 
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4 sticky top-0 h-screen">
-        <div className="space-y-6">
-          <div className="text-center pt-4">
-            <div className="relative w-16 h-16 mx-auto mb-3">
-              <Image src="/logo.png" alt="Logo Aplikasi" fill sizes="64px"
-                className="rounded-lg object-cover border border-slate-700" priority />
-            </div>
-            <h2 className="text-sm font-semibold tracking-wide leading-snug px-2 text-slate-200">
-              Aplikasi Pengolahan <br /> Nilai Siswa
-            </h2>
-          </div>
-
-          <hr className="border-slate-800 mx-[-16px]" />
-
-          <nav className="space-y-1">
-            <button type="button" onClick={() => router.push("/guru/dashboard")}
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-              <LayoutDashboard size={18} /><span>Dashboard</span>
-            </button>
-            <button type="button" onClick={() => router.push("/guru/kelola-nilai")}
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition bg-indigo-600 text-white shadow-md shadow-indigo-600/10">
-              <Users size={18} /><span>Kelola Nilai Siswa</span>
-            </button>
-            <button type="button" onClick={() => router.push("/guru/laporan-nilai")}
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-              <FileText size={18} /><span>Laporan Nilai</span>
-            </button>
-          </nav>
-        </div>
-
-        <div className="pb-4">
-          <button type="button" onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-950/40 border border-slate-700 hover:border-red-900/50 text-slate-300 hover:text-red-400 font-medium py-2 px-4 rounded-full text-sm transition-colors shadow-sm">
-            <LogOut size={16} /><span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-100">Kelola Nilai Siswa</h1>
-            <p className="text-sm text-slate-400 mt-1">Tambah atau edit nilai siswa sesuai mata pelajaran yang diampu</p>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-xs">
-                  <th className="py-3 px-4 text-center">NIS</th>
-                  <th className="py-3 px-4 text-center">Nama Siswa</th>
-                  <th className="py-3 px-4 text-center">Kelas</th>
-                  <th className="py-3 px-4 text-center">Mata Pelajaran</th>
-                  <th className="py-3 px-4 text-center">Nilai Tugas</th>
-                  <th className="py-3 px-4 text-center">Nilai UTS</th>
-                  <th className="py-3 px-4 text-center">Nilai UAS</th>
-                  <th className="py-3 px-4 text-center">Nilai Akhir</th>
-                  <th className="py-3 px-4 text-center">Status Kelulusan</th>
-                  <th className="py-3 px-4 text-center">Aksi</th>
+      <section className={panel}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className={tableHeadRow}>
+                <SortTh label={t("common.nis")} id="nis" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.namaSiswa")} id="nama" sort={sort} onSort={setSort} center />
+                <SortTh label={t("common.class")} id="kelas" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.mapel")} id="mata_pelajaran" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.nilaiTugas")} id="nilai_tugas" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.nilaiUts")} id="nilai_uts" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.nilaiUas")} id="nilai_uas" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.nilaiAkhir")} id="nilai_akhir" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.statusKelulusan")} id="status_kelulusan" sort={sort} onSort={setSort} center />
+                <th className={thCenter}>{t("common.actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={10} className={emptyCell}>
+                    <Loader2 size={18} className="mr-2 inline animate-spin align-middle text-[#b3b3b3]" />
+                    {t("loading.grades")}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {semuaNilai.length > 0 ? (
-                  semuaNilai.map((nilai) => (
-                    <tr key={nilai.id} className="border-b border-slate-800/60 hover:bg-slate-800/20 transition">
-                      <td className="py-3.5 px-4 text-center font-mono text-indigo-400">{nilai.nis}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-200 font-medium">{nilai.nama}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-400">{nilai.kelas}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-400">{nilai.mata_pelajaran}</td>
-                      <td className="py-3.5 px-4 text-center">{nilai.nilai_tugas}</td>
-                      <td className="py-3.5 px-4 text-center">{nilai.nilai_uts}</td>
-                      <td className="py-3.5 px-4 text-center">{nilai.nilai_uas}</td>
-                      <td className="py-3.5 px-4 text-center">{nilai.nilai_akhir}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-300">{nilai.status_kelulusan || "-"}</td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button type="button" onClick={() => openTambahNilai(nilai)}
-                          className="text-xs bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-400 px-2.5 py-1 rounded border border-indigo-800/50 mr-2 transition">
-                          + Input Nilai
-                        </button>
-                        <button type="button" onClick={() => openEditNilai(nilai)}
-                          className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded border border-slate-700 mr-2 transition">
-                          Edit Nilai
-                        </button>
-                        <button type="button" onClick={() => { setSelectedId(nilai.id); setShowDeleteModal(true); }}
-                          className="text-xs bg-red-950/40 hover:bg-red-900/60 text-red-400 px-2.5 py-1 rounded border border-red-900/50 transition">
-                          Hapus Nilai
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500">
-                      Belum ada data atau sedang memuat data siswa...
+              ) : semuaNilai.length > 0 ? (
+                sortRows(semuaNilai, sort).map((nilai) => {
+                  const belumInput = belumPernahInput(nilai);
+                  return (
+                  <tr key={nilai.id} className={tr}>
+                    <td className={tdCenter + " font-mono"}>{nilai.nis}</td>
+                    <td className={tdCenter + " font-medium text-white"}>{nilai.nama}</td>
+                    <td className={tdCenter + " text-[#b3b3b3]"}>{nilai.kelas}</td>
+                    <td className={tdCenter + " text-[#b3b3b3]"}>{tv(nilai.mata_pelajaran)}</td>
+                    <td className={tdCenter}>{nilai.nilai_tugas}</td>
+                    <td className={tdCenter}>{nilai.nilai_uts}</td>
+                    <td className={tdCenter}>{nilai.nilai_uas}</td>
+                    <td className={tdCenter + " font-bold text-white"}>{nilai.nilai_akhir}</td>
+                    <td className={tdCenter}>
+                      <span className={badgeKelulusan(nilai.status_kelulusan)}>
+                        {nilai.status_kelulusan ? tv(nilai.status_kelulusan) : "-"}
+                      </span>
+                    </td>
+                    <td className={tdCenter + " whitespace-nowrap"}>
+                      <button
+                        type="button"
+                        onClick={() => openTambahNilai(nilai)}
+                        className={btnSmPrimary + " mr-2"}
+                      >
+                        {t("nmg.input")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditNilai(nilai)}
+                        title={belumInput ? t("nmg.needInputBody") : undefined}
+                        className={
+                          btnSmNeutral +
+                          " mr-2" +
+                          (belumInput
+                            ? " cursor-not-allowed opacity-50"
+                            : "")
+                        }
+                      >
+                        {t("nmg.edit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteNilai(nilai)}
+                        title={belumInput ? t("nmg.needInputBody") : undefined}
+                        className={
+                          btnSmDanger +
+                          (belumInput
+                            ? " cursor-not-allowed opacity-50"
+                            : "")
+                        }
+                      >
+                        {t("nmg.del")}
+                      </button>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={10} className={emptyCell}>
+                    {t("empty.noGrades")}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
+      </section>
 
-        {showModalTambahNilai && selectedSiswa && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-1">Tambah Nilai</h2>
-              <p className="text-sm text-slate-400 mb-4">
-                Siswa: <span className="text-slate-200 font-medium">{selectedSiswa.nama}</span> — {selectedSiswa.kelas}
+      {showModalTambahNilai && selectedSiswa && (
+        <div className={modalOverlay}>
+          <div className={modalPanel}>
+            <div className={modalBody}>
+              <h2 className={modalTitle}>{t("nmg.modalAdd")}</h2>
+              <p className="mb-4 mt-1 text-sm text-[#b3b3b3]">
+                {t("nmg.student")} <span className="font-semibold text-white">{selectedSiswa.nama}</span> — {selectedSiswa.kelas}
               </p>
               <form onSubmit={handleTambahNilai} className="space-y-4">
                 <div>
-                  <label className="block text-sm mb-1">NIS</label>
-                  <input type="text" value={selectedSiswa.nis} disabled
-                    className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-500 font-mono cursor-not-allowed" />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">Mata Pelajaran</label>
+                  <label className={label}>{t("common.nis")}</label>
                   <input
                     type="text"
-                    value={inputTambahNilai.mata_pelajaran}
+                    value={selectedSiswa.nis}
                     disabled
-                    className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-500 cursor-not-allowed"
+                    className={input + " font-mono"}
+                  />
+                </div>
+                <div>
+                  <label className={label}>{t("th.mapel")}</label>
+                  <input
+                    type="text"
+                    value={tv(inputTambahNilai.mata_pelajaran)}
+                    disabled
+                    className={input}
                   />
                 </div>
                 {["nilai_tugas", "nilai_uts", "nilai_uas"].map((field) => (
                   <div key={field}>
-                    <label className="block text-sm mb-1">
-                      {field === "nilai_tugas" ? "Nilai Tugas" : field === "nilai_uts" ? "Nilai UTS" : "Nilai UAS"}
+                    <label className={label}>
+                      {field === "nilai_tugas" ? t("th.nilaiTugas") : field === "nilai_uts" ? t("th.nilaiUts") : t("th.nilaiUas")}
                     </label>
                     <input type="number"
+                      min={0}
+                      max={100}
                       value={inputTambahNilai[field as keyof typeof inputTambahNilai]}
                       onChange={(e) => setInputTambahNilai({ ...inputTambahNilai, [field]: e.target.value })}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" />
+                      className={input} />
                   </div>
                 ))}
                 <div>
-                  <label className="block text-sm mb-1">Status Nilai</label>
-                  <select 
+                  <label className={label}>{t("th.statusNilai")}</label>
+                  <select
                     value={inputTambahNilai.status_nilai}
                     onChange={(e) => setInputTambahNilai({ ...inputTambahNilai, status_nilai: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2"
+                    className={select}
                   >
-                    <option value="Belum Dinilai">Belum Dinilai</option>
-                    <option value="Sudah Dinilai">Sudah Dinilai</option>
+                    <option value="Belum Dinilai">{tv("Belum Dinilai")}</option>
+                    <option value="Sudah Dinilai">{tv("Sudah Dinilai")}</option>
                   </select>
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <button type="button" onClick={closeModalTambah}
-                    className="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm font-medium">Batal</button>
-                  <button type="submit"
-                    className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-sm font-medium text-white">Simpan Nilai</button>
+                <div className={modalFooter}>
+                  <button type="button" onClick={closeModalTambah} className={btnDarkPill}>
+                    {t("common.cancel")}
+                  </button>
+                  <button type="submit" className={btnCta}>
+                    {t("nmg.save")}
+                  </button>
                 </div>
               </form>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {showModalEditNilai && selectedSiswa && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-1">Edit Nilai</h2>
-              <p className="text-sm text-slate-400 mb-4">
-                Siswa: <span className="text-slate-200 font-medium">{selectedSiswa.nama}</span> — {selectedSiswa.kelas}
+      {showModalEditNilai && selectedSiswa && (
+        <div className={modalOverlay}>
+          <div className={modalPanel}>
+            <div className={modalBody}>
+              <h2 className={modalTitle}>{t("nmg.modalEdit")}</h2>
+              <p className="mb-4 mt-1 text-sm text-[#b3b3b3]">
+                {t("nmg.student")} <span className="font-semibold text-white">{selectedSiswa.nama}</span> — {selectedSiswa.kelas}
               </p>
               <form onSubmit={handleEditNilai} className="space-y-4">
                 <div>
-                  <label className="block text-sm mb-1">Mata Pelajaran</label>
-
-                  <div className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-400">
-                    {selectedSiswa.mata_pelajaran}
+                  <label className={label}>{t("th.mapel")}</label>
+                  <div className={input + " cursor-default text-[#b3b3b3]"}>
+                    {tv(selectedSiswa.mata_pelajaran)}
                   </div>
                 </div>
                 {["nilai_tugas", "nilai_uts", "nilai_uas"].map((field) => (
                   <div key={field}>
-                    <label className="block text-sm mb-1">
-                      {field === "nilai_tugas" ? "Nilai Tugas" : field === "nilai_uts" ? "Nilai UTS" : "Nilai UAS"}
+                    <label className={label}>
+                      {field === "nilai_tugas" ? t("th.nilaiTugas") : field === "nilai_uts" ? t("th.nilaiUts") : t("th.nilaiUas")}
                     </label>
                     <input type="number"
+                      min={0}
+                      max={100}
                       value={inputEditNilai[field as keyof typeof inputEditNilai]}
                       onChange={(e) => setInputEditNilai({ ...inputEditNilai, [field]: e.target.value })}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" />
+                      className={input} />
                   </div>
                 ))}
                 <div>
-          <label className="block text-sm mb-1">Status Nilai</label>
-          <select 
-            value={inputEditNilai.status_nilai}
-            onChange={(e) => setInputEditNilai({ ...inputEditNilai, status_nilai: e.target.value })}
-            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2"
-          >
-            <option value="Belum Dinilai">Belum Dinilai</option>
-            <option value="Sudah Dinilai">Sudah Dinilai</option>
-          </select>
-        </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <button type="button" onClick={closeModalEdit}
-                    className="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm font-medium">Batal</button>
-                  <button type="submit"
-                    className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-sm font-medium text-white">Simpan Perubahan</button>
+                  <label className={label}>{t("th.statusNilai")}</label>
+                  <select
+                    value={inputEditNilai.status_nilai}
+                    onChange={(e) => setInputEditNilai({ ...inputEditNilai, status_nilai: e.target.value })}
+                    className={select}
+                  >
+                    <option value="Belum Dinilai">{tv("Belum Dinilai")}</option>
+                    <option value="Sudah Dinilai">{tv("Sudah Dinilai")}</option>
+                  </select>
+                </div>
+                <div className={modalFooter}>
+                  <button type="button" onClick={closeModalEdit} className={btnDarkPill}>
+                    {t("common.cancel")}
+                  </button>
+                  <button type="submit" className={btnCta}>
+                    {t("common.save")}
+                  </button>
                 </div>
               </form>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-            <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/50">
+      {showNeedInputModal && selectedSiswa && (
+        <div className={modalOverlay}>
+          <div className={modalPanel + " max-w-sm"}>
+            <div className={modalBody}>
               <div className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 bg-red-950/60 border border-red-800/50 rounded-full flex items-center justify-center mb-4 text-red-500">
-                  <AlertTriangle size={24} />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-100">Konfirmasi Hapus</h3>
-                <p className="text-sm text-slate-400 mt-2 px-2">
-                  Hapus nilai siswa dengan ID{" "}
-                  <span className="font-mono text-indigo-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">{selectedId}</span>?
-                  Tindakan ini tidak dapat dibatalkan.
+                <Info size={28} className="mb-3 text-[#ffa42b]" />
+                <h3 className="text-base font-bold text-white">
+                  {t("nmg.needInputTitle")}
+                </h3>
+                <p className="mt-2 text-sm text-[#b3b3b3]">
+                  {t("nmg.needInputBody")}
                 </p>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button type="button" onClick={() => { setShowDeleteModal(false); setSelectedId(null); }}
-                  className="flex-1 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-medium text-sm transition-colors">
-                  Batal
+              <div className={modalFooter}>
+                <button
+                  type="button"
+                  onClick={closeNeedInputModal}
+                  className={btnDarkPill}
+                >
+                  {t("common.cancel")}
                 </button>
-                <button type="button" onClick={handleDeleteNilai}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-sm transition-colors">
-                  Ya, Hapus
+                <button
+                  type="button"
+                  onClick={gotoInputFromNeedInput}
+                  className={btnCta}
+                >
+                  {t("nmg.needInputCta")}
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </main>
-    </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className={modalOverlay}>
+          <div className={modalPanel + " max-w-sm"}>
+            <div className={modalBody}>
+              <div className="flex flex-col items-center text-center">
+                <AlertTriangle size={28} className="mb-3 text-[#f3727f]" />
+                <h3 className="text-base font-bold text-white">{t("common.confirmDelete")}</h3>
+                <p className="mt-2 text-sm text-[#b3b3b3]">
+                  {t("nmg.delMsg", { id: "\u0000" }).split("\u0000")[0]}
+                  <span className="rounded bg-[#1f1f1f] px-1.5 py-0.5 font-mono text-white">
+                    {selectedId}
+                  </span>
+                  {t("nmg.delMsg", { id: "\u0000" }).split("\u0000")[1]}
+                </p>
+              </div>
+              <div className={modalFooter}>
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteModal(false); setSelectedId(null); }}
+                  className={btnDarkPill}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button type="button" onClick={handleDeleteNilai} className={btnDangerPill}>
+                  {t("common.yesDelete")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }

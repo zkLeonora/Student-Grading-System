@@ -2,8 +2,31 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, LogOut } from "lucide-react";
-import Image from "next/image";
+import { Loader2 } from "lucide-react";
+import AppShell, { PageHeader } from "@/components/AppShell";
+import {
+  DistributionChart,
+  DonutChart,
+  HBarList,
+  avg,
+} from "@/components/charts";
+import { SortTh, sortRows, type SortState } from "@/components/SortableTh";
+import { useI18n } from "@/components/I18n";
+import {
+  badgeStatusNilai,
+  emptyCell,
+  panel,
+  panelHeader,
+  sectionTitle,
+  statItem,
+  statLabel,
+  statStripFour,
+  statValue,
+  tableHeadRow,
+  td,
+  tdCenter,
+  tr,
+} from "@/components/ui";
 
 // Tipe data disesuaikan
 type Nilai = {
@@ -19,84 +42,177 @@ type Nilai = {
 
 export default function SiswaDashboardPage() {
   const router = useRouter();
+  const { t, tv } = useI18n();
   const [dataNilai, setDataNilai] = useState<Nilai[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sort, setSort] = useState<SortState | null>(null);
 
-useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
-        try {
-            const res = await fetch("/api/siswa/nilai");
-            const data = await res.json();
+      try {
+        const res = await fetch("/api/siswa/nilai");
+        const data = await res.json();
 
-            console.log("DATA API:", data);
-
-            if (Array.isArray(data)) {
-                setDataNilai(data);
-            }
-        } catch (error) {
-            console.error("Gagal memuat data:", error);
+        if (Array.isArray(data)) {
+          setDataNilai(data);
         }
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
-}, []);
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/logout", { method: "POST" });
     router.push("/login");
   };
 
-  return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4 sticky top-0 h-screen">
-        <div className="space-y-6">
-          <div className="text-center pt-4">
-            <div className="relative w-16 h-16 mx-auto mb-3">
-              <Image src="/logo.png" alt="Logo" fill sizes="64px" className="rounded-lg object-cover border border-slate-700" priority />
-            </div>
-            <h2 className="text-sm font-semibold text-slate-200">Dashboard Siswa</h2>
-          </div>
-          <hr className="border-slate-800 mx-[-16px]" />
-          <nav>
-            <button className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white">
-              <LayoutDashboard size={18} /><span>Dashboard</span>
-            </button>
-          </nav>
-        </div>
-        <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-950/40 text-slate-300 py-2 rounded-full text-sm">
-          <LogOut size={16} /><span>Logout</span>
-        </button>
-      </aside>
+  const nilaiAkhir = dataNilai.map((n) => n.nilai_akhir);
+  const rataRata = dataNilai.length > 0 ? avg(nilaiAkhir) : null;
+  const tertinggi = dataNilai.length > 0 ? Math.max(...nilaiAkhir) : null;
+  const terendah = dataNilai.length > 0 ? Math.min(...nilaiAkhir) : null;
+  const lulus = dataNilai.filter((n) => n.status_kelulusan === "Lulus").length;
+  const tidakLulus = dataNilai.filter(
+    (n) => n.status_kelulusan && n.status_kelulusan !== "Lulus"
+  ).length;
+  const belumDinilai = dataNilai.filter(
+    (n) => n.status_kelulusan === null || n.status_nilai !== "Sudah Dinilai"
+  ).length;
 
-      <main className="flex-1 p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Nilai Akademik Saya</h1>
+  return (
+    <AppShell
+      role="siswa"
+      active="/siswa/dashboard"
+      onNavigate={(href) => router.push(href)}
+      onLogout={handleLogout}
+    >
+      <PageHeader
+        title={t("siswa.title")}
+        description={t("siswa.desc")}
+      />
+
+      <div className={statStripFour}>
+        <div className={statItem}>
+          <p className={statLabel}>{t("stat.avg")}</p>
+          <p className={statValue}>
+            {rataRata !== null ? rataRata.toFixed(1) : "—"}
+          </p>
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <table className="w-full text-sm text-left">
+        <div className={statItem}>
+          <p className={statLabel}>{t("stat.tertinggi")}</p>
+          <p className={statValue}>
+            {tertinggi !== null ? tertinggi : "—"}
+          </p>
+        </div>
+        <div className={statItem}>
+          <p className={statLabel}>{t("stat.terendah")}</p>
+          <p className={statValue}>
+            {terendah !== null ? terendah : "—"}
+          </p>
+        </div>
+        <div className={statItem}>
+          <p className={statLabel}>{t("stat.jumlahMapel")}</p>
+          <p className={statValue}>{dataNilai.length}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <section className={panel}>
+          <div className={panelHeader}>
+            <h2 className={sectionTitle}>{t("chart.distribution")}</h2>
+          </div>
+          <DistributionChart values={nilaiAkhir} />
+        </section>
+        <section className={panel}>
+          <div className={panelHeader}>
+            <h2 className={sectionTitle}>{t("chart.gradesPerMapel")}</h2>
+          </div>
+          <HBarList
+            items={[...dataNilai]
+              .map((n) => ({
+                label: tv(n.mata_pelajaran),
+                value: n.nilai_akhir,
+              }))
+              .sort((a, b) => b.value - a.value)}
+          />
+        </section>
+        <section className={panel}>
+          <div className={panelHeader}>
+            <h2 className={sectionTitle}>{t("chart.passStatus")}</h2>
+          </div>
+          <DonutChart
+            segments={[
+              { label: t("donut.lulus"), value: lulus, color: "#1ed760" },
+              {
+                label: t("donut.tidakLulus"),
+                value: tidakLulus,
+                color: "#f3727f",
+              },
+              {
+                label: t("donut.belumDinilai"),
+                value: belumDinilai,
+                color: "#ffa42b",
+              },
+            ]}
+            totalLabel={t("chart.mapel")}
+          />
+        </section>
+      </div>
+
+      <section className={panel + " mt-4"}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 uppercase text-xs">
-                <th className="py-4 px-4">Mapel</th>
-                <th className="py-4 px-4 text-center">Tugas</th>
-                <th className="py-4 px-4 text-center">UTS</th>
-                <th className="py-4 px-4 text-center">UAS</th>
-                <th className="py-4 px-4 text-center">Akhir</th>
-                <th className="py-4 px-4 text-center">Status</th>
+              <tr className={tableHeadRow}>
+                <SortTh label={t("th.mapel")} id="mata_pelajaran" sort={sort} onSort={setSort} />
+                <SortTh label={t("th.tugas")} id="nilai_tugas" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.uts")} id="nilai_uts" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.uas")} id="nilai_uas" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.akhir")} id="nilai_akhir" sort={sort} onSort={setSort} center />
+                <SortTh label={t("th.status")} id="status_nilai" sort={sort} onSort={setSort} center />
               </tr>
             </thead>
             <tbody>
-              {dataNilai.map((n) => (
-                <tr key={n.id} className="border-b border-slate-800/50">
-                  <td className="py-4 px-4">{n.mata_pelajaran}</td>
-                  <td className="py-4 px-4 text-center">{n.nilai_tugas}</td>
-                  <td className="py-4 px-4 text-center">{n.nilai_uts}</td>
-                  <td className="py-4 px-4 text-center">{n.nilai_uas}</td>
-                  <td className="py-4 px-4 text-center font-bold">{n.nilai_akhir}</td>
-                  <td className="py-4 px-4 text-center">{n.status_nilai}</td>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className={emptyCell}>
+                    <Loader2 size={18} className="mr-2 inline animate-spin align-middle text-[#b3b3b3]" />
+                    {t("loading.grades")}
+                  </td>
                 </tr>
-              ))}
+              ) : dataNilai.length > 0 ? (
+                sortRows(dataNilai, sort).map((n) => (
+                  <tr key={n.id} className={tr}>
+                    <td className={td + " font-medium text-white"}>
+                      {tv(n.mata_pelajaran)}
+                    </td>
+                    <td className={tdCenter}>{n.nilai_tugas}</td>
+                    <td className={tdCenter}>{n.nilai_uts}</td>
+                    <td className={tdCenter}>{n.nilai_uas}</td>
+                    <td className={tdCenter + " font-bold text-white"}>
+                      {n.nilai_akhir}
+                    </td>
+                    <td className={tdCenter}>
+                      <span className={badgeStatusNilai(n.status_nilai)}>
+                        {tv(n.status_nilai)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className={emptyCell}>
+                    {t("empty.noNilaiPlain")}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </main>
-    </div>
+      </section>
+    </AppShell>
   );
 }
