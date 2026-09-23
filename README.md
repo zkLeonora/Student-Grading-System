@@ -1,4 +1,4 @@
-# LSP 1 - School Grading Management
+# School Grading Management
 
 A Next.js 16 application for managing school grading workflows with login, role-based dashboards, and grade reporting.
 
